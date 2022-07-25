@@ -31,26 +31,28 @@ Simple configuration:
     'bootstrap' => [ ..., 'task', ]
     'modules'   => [
       'task'  => [
-        'class' => 'task\Module',
-          'components' => [
-                'brokerDriver' => [
-                    'class'     => task\drivers\RabbitMQDriver::class,
-                    'host'      => 'localhost',
-                    'port'      => 5672,
-                    'user'      => 'guest',
-                    'password'  => 'guest',
-                    'vhost'     => '/',
-                ],
-                /*
-                'brokerDriver' => [
-                    'class' => task\drivers\RedisDriver::class,
-                    'redis' => [
-                        'hostname'  => 'redis',
-                    ],
-                ],
-                */
+        'class'         => 'task\Module',
+        'manager'       => [
+            'requeue'       => false,
+            'processLimit'  => 10,
+        ],
+        'brokerDriver'  => [
+            'class'     => task\drivers\RabbitMQDriver::class,
+            'host'      => 'localhost',
+            'port'      => 5672,
+            'user'      => 'guest',
+            'password'  => 'guest',
+            'vhost'     => '/',
+        ],
+        /*
+        'brokerDriver' => [
+            'class' => task\drivers\RedisDriver::class,
+            'redis' => [
+                'hostname'  => 'redis',
             ],
         ],
+        */
+      ],
     ],
   ...
 ]
@@ -58,7 +60,7 @@ Simple configuration:
 2. Run code:
 
 ```
-Yii::$app->getModule('task')->manager->addTask('task', \task\tasks\TestTask::class, [
+Yii::$app->getModule('task')->manager->addTask('task', 'exchange', \task\tasks\TestTask::class, [
   'message' => 'It`s a test.',
 ]);
 
@@ -66,5 +68,5 @@ Yii::$app->getModule('task')->manager->addTask('task', \task\tasks\TestTask::cla
 3. Run command:
 
 ```
-yii task/run -q task
+yii task/run -q task -e exchange
 ```

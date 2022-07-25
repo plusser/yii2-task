@@ -13,11 +13,13 @@ class TaskController extends Controller
 {
 
     public $queue;
+    public $exchange;
 
     public function options($actionId): array
     {
         return [
             'queue',
+            'exchange',
         ];
     }
 
@@ -25,6 +27,7 @@ class TaskController extends Controller
     {
         return [
             'q' => 'queue',
+            'e' => 'exchange',
         ];
     }
 
@@ -35,7 +38,7 @@ class TaskController extends Controller
         if(!$error){
             try{
                 $this->singleRunning();
-                Module::getInstance()->manager->processQueue((string) $this->queue);
+                Module::getInstance()->manager->processQueue((string) $this->queue, (string) $this->exchange);
             }catch(Throwable $e){
                 $error = true;
 
@@ -91,6 +94,8 @@ class TaskController extends Controller
             $this->action->id,
             '_',
             $this->queue,
+            '_',
+            $this->exchange,
             '.pid',
         ]);
     }

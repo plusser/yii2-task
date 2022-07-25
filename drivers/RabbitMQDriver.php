@@ -4,6 +4,7 @@ namespace task\drivers;
 
 use yii\base\Component;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Exchange\AMQPExchangeType;
 use PhpAmqpLib\Message\AMQPMessage;
 use task\interfaces\BrokerDriverInterface;
 use Throwable, Exception;
@@ -34,16 +35,19 @@ class RabbitMQDriver extends Component implements BrokerDriverInterface
         $this->connection && $this->connection->close();
     }
 
-    public function addQueueItem(string $queue, string $item): void
+    public function addQueueItem(string $queue, string $exchange, string $item): void
     {
         $this->channel->queue_declare($queue, false, true, false, false);
+        $this->channel->exchange_declare($exchange, AMQPExchangeType::DIRECT, false, true, false);
+        $this->channel->queue_bind($queue, $exchange);
+
         $this->channel->basic_publish(new AMQPMessage($item, [
             'content_type'  => 'text/plain',
             'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
-        ]), '', $queue);
+        ]), $exchange);
     }
 
-    public function processQueue(string $queue, callable $callback, bool $requeue, int $processLimit): void
+    public function processQueue(string $queue, string $exchange, callable $callback, bool $requeue, int $processLimit): void
     {
         $consumer = function(AMQPMessage $message) use ($callback, $requeue): void{
             try{
@@ -74,6 +78,8 @@ class RabbitMQDriver extends Component implements BrokerDriverInterface
                     $this->init();
                     $this->channel->basic_qos(null, 1, null);
                     $this->channel->queue_declare($queue, false, true, false, false);
+                    $this->channel->exchange_declare($exchange, AMQPExchangeType::DIRECT, false, true, false);
+                    $this->channel->queue_bind($queue, $exchange);
                     $this->channel->basic_consume($queue, 'PHP_' . posix_getpid(), false, false, false, false, $consumer);
                     $this->channel->consume();
                 }

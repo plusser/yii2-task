@@ -19,18 +19,18 @@ class RedisDriver extends Component implements BrokerDriverInterface
         $this->redis = Instance::ensure($this->redis, Connection::class);
     }
 
-    public function addQueueItem(string $queue, string $item): void
+    public function addQueueItem(string $queue, string $exchange, string $item): void
     {
-        $this->redis->rpush($queue, $item);
+        $this->redis->rpush($this->generateKey($queue, $exchange), $item);
     }
 
-    public function processQueue(string $queue, callable $callback, bool $requeue, int $processLimit): void
+    public function processQueue(string $queue, string $exchange, callable $callback, bool $requeue, int $processLimit): void
     {
         $processList = [];
 
         while(true){
             if(count($processList) < $processLimit){
-                $message = $this->redis->lpop($queue);
+                $message = $this->redis->lpop($this->generateKey($queue, $exchange));
 
                 if(!is_null($message)){
 
@@ -45,7 +45,7 @@ class RedisDriver extends Component implements BrokerDriverInterface
                             $callback($message);
                         }catch(Throwable $e){
                             if($requeue){
-                                $this->addQueueItem($queue, $message);
+                                $this->addQueueItem($this->generateKey($queue, $exchange), $message);
                             }
                 
                             throw $e;
@@ -67,6 +67,11 @@ class RedisDriver extends Component implements BrokerDriverInterface
                 }
             }
         }
+    }
+
+    protected function generateKey(string $queue, string $exchange): string
+    {
+        return $queue . '/' . $exchange;
     }
 
 }
